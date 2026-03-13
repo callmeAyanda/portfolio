@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-desktop: #008080;
+  --color-window: #c0c0c0;
+  --color-title-bar-active: #000080;
+  --color-title-bar-inactive: #808080;
+  --color-border-light: #ffffff;
+  --color-border-dark: #808080;
+  --color-border-darker: #404040;
+  --font-sans: "MS Sans Serif", Tahoma, Geneva, sans-serif;
+  --font-mono: "Lucida Console", Monaco, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff;
-    --foreground: #171717;
+@layer base {
+  body {
+    @apply font-sans antialiased;
+    background-color: #008080;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  .border-raised {
+    border-width: 2px;
+    border-style: solid;
+    border-top-color: #ffffff;
+    border-left-color: #ffffff;
+    border-bottom-color: #808080;
+    border-right-color: #808080;
+  }
+
+  .border-sunken {
+    border-width: 2px;
+    border-style: solid;
+    border-top-color: #808080;
+    border-left-color: #808080;
+    border-bottom-color: #ffffff;
+    border-right-color: #ffffff;
+  }
 }

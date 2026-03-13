@@ -1,10 +1,12 @@
 "use client";
 
+import { Desktop } from '@/widgets/desktop/Desktop';
+
 export default function Home() {
   return (
-    <div>
-      <h1>Hello World</h1>
-      <p>welcome to my personal workspace</p>
-    </div>
-  );
+    <main className="relative w-full h-screen overflow-hidden">
+      <Desktop />
+    </main>
+  )
 }
+
