@@ -18,7 +18,7 @@ import { ContactContent } from './ContactContent'
 import { AboutContent } from './AboutContent'
 import { ProjectDetailsContent } from './ProjectDetailsContent'
 
-const DESKTOP_NAME = 'A22 MA'
+const DESKTOP_NAME = 'AYANDA MAKHUBU'
 
 const appMap: Array<{
   icon: React.ElementType
@@ -49,7 +49,7 @@ export const Desktop: React.FC = () => {
       title,
       content: contentType,
       position,
-      size: { width: 520, height: 360 },
+      size: { width: 700, height: 400 },
     })
   }
 
@@ -61,7 +61,7 @@ export const Desktop: React.FC = () => {
       instanceKey: `project:${project.id}`,
       payload: { projectId: project.id },
       position,
-      size: { width: 560, height: 380 },
+      size: { width: 700, height: 400 },
     })
   }
 
@@ -94,7 +94,8 @@ export const Desktop: React.FC = () => {
 
   return (
     <div
-      className="relative h-screen w-full overflow-hidden p-4"
+      data-desktop-root
+      className="relative h-screen w-full overflow-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           setSelectedIcon(null)
@@ -103,7 +104,7 @@ export const Desktop: React.FC = () => {
     >
       <DesktopNameplate name={DESKTOP_NAME} />
 
-      <div className="relative z-0 grid grid-cols-[repeat(auto-fill,80px)] gap-4">
+      <div className="relative z-0 grid grid-cols-[repeat(auto-fill,80px)] gap-4 p-4">
         {appMap.map((app) => (
           <Icon
             key={app.type}
@@ -116,7 +117,7 @@ export const Desktop: React.FC = () => {
         ))}
       </div>
 
-      <div className="relative z-20">
+      <div className="absolute inset-0 z-20 pointer-events-none">
         {windows
           .filter((w) => w.isOpen && !w.isMinimized)
           .map((win) => (

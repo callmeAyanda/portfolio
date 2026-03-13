@@ -4,7 +4,7 @@ import './globals.css'
 import { Taskbar } from '@/widgets/taskbar/Taskbar'
 
 export const metadata: Metadata = {
-  title: 'My Retro Portfolio',
+  title: "Ayanda's Retro Portfolio",
   description: 'A Windows 98 inspired portfolio',
 }
 

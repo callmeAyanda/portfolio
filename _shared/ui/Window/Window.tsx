@@ -25,6 +25,7 @@ export const Window: React.FC<WindowProps> = ({
     closeWindow,
     minimizeWindow,
     toggleMaximizeWindow,
+    restoreFromMaximize,
     updateWindowPosition,
     updateWindowSize,
     windows,
@@ -40,10 +41,30 @@ export const Window: React.FC<WindowProps> = ({
     height: number
   } | null>(null)
 
-  const { position, handleMouseDown } = useDraggable({
+  const { position, handleMouseDown, startDragAt } = useDraggable({
     initialPosition: windowData?.position ?? initialPosition,
     onDrag: (newPos) => updateWindowPosition(id, newPos),
   })
+
+  const getDesktopViewport = useCallback(() => {
+    const desktopRoot = document.querySelector('[data-desktop-root]') as HTMLElement | null
+    const taskbar = document.querySelector('[data-taskbar-root]') as HTMLElement | null
+
+    if (!desktopRoot) {
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }
+    }
+
+    const rect = desktopRoot.getBoundingClientRect()
+    const taskbarHeight = taskbar?.getBoundingClientRect().height ?? 0
+
+    return {
+      width: rect.width,
+      height: Math.max(200, rect.height - taskbarHeight),
+    }
+  }, [])
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -80,9 +101,46 @@ export const Window: React.FC<WindowProps> = ({
     [id, size.height, size.width, updateWindowSize]
   )
 
+  const handleTitleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-window-control]')) {
+        return
+      }
+
+      if (!isMaximized) {
+        handleMouseDown(e)
+        return
+      }
+
+      e.stopPropagation()
+
+      const restoredSize = windowData?.restoreState?.size ?? { width: 700, height: 400 }
+      const viewport = getDesktopViewport()
+      const maxX = Math.max(0, viewport.width - restoredSize.width)
+      const maxY = Math.max(0, viewport.height - restoredSize.height)
+      const restoredPosition = {
+        x: Math.min(maxX, Math.max(0, e.clientX - restoredSize.width / 2)),
+        y: Math.min(maxY, Math.max(0, e.clientY - 18)),
+      }
+
+      restoreFromMaximize(id, restoredPosition)
+      startDragAt(e, restoredPosition)
+    },
+    [
+      getDesktopViewport,
+      handleMouseDown,
+      id,
+      isMaximized,
+      restoreFromMaximize,
+      startDragAt,
+      windowData?.restoreState?.size,
+    ]
+  )
+
   return (
     <div
-      className="absolute bg-window border-raised shadow-lg"
+      className="absolute bg-window border-raised shadow-lg pointer-events-auto"
       style={{
         left: position.x,
         top: position.y,
@@ -94,14 +152,13 @@ export const Window: React.FC<WindowProps> = ({
     >
       {/* Title Bar */}
       <div
-        className={`flex items-center justify-between h-7 px-2 bg-title-bar-active border-b-2 border-b-border-dark ${
-          isMaximized ? 'cursor-default' : 'cursor-move'
-        }`}
-        onMouseDown={!isMaximized ? handleMouseDown : undefined}
+        className="flex items-center justify-between h-7 px-2 bg-title-bar-active border-b-2 border-b-border-dark cursor-move"
+        onMouseDown={handleTitleMouseDown}
       >
         <span className="text-white font-bold text-sm">{title}</span>
         <div className="flex gap-1">
           <button
+            data-window-control
             className="w-6 h-6 flex items-center justify-center bg-window border-raised active:border-sunken text-black"
             onClick={(e) => {
               e.stopPropagation()
@@ -111,19 +168,21 @@ export const Window: React.FC<WindowProps> = ({
             <Minus size={14} />
           </button>
           <button
+            data-window-control
             className="w-6 h-6 flex items-center justify-center bg-window border-raised active:border-sunken text-black"
             onClick={(e) => {
               e.stopPropagation()
+              const viewport = getDesktopViewport()
               toggleMaximizeWindow(id, {
-                width: window.innerWidth,
-                height: window.innerHeight,
-                taskbarHeight: 40,
+                width: viewport.width,
+                height: viewport.height,
               })
             }}
           >
             <Square size={12} />
           </button>
           <button
+            data-window-control
             className="w-6 h-6 flex items-center justify-center bg-window border-raised active:border-sunken text-black"
             onClick={(e) => {
               e.stopPropagation()

@@ -19,7 +19,10 @@ export const Taskbar: React.FC = () => {
   const minimizedWindows = windows.filter((w) => w.isOpen && w.isMinimized)
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex h-10 items-center border-raised border-t-2 border-t-border-light bg-window px-1">
+    <div
+      data-taskbar-root
+      className="fixed bottom-0 left-0 right-0 z-50 flex h-10 items-center border-raised border-t-2 border-t-border-light bg-window px-1"
+    >
       <div className="relative">
         <Button
           variant={showStartMenu ? 'active' : 'default'}

@@ -36,7 +36,7 @@ export const Icon: React.FC<IconProps> = ({
         <IconComponent size={32} strokeWidth={1.5} className="text-black" />
       </div>
       <span
-        className={`mt-1 block text-xs text-center text-white drop-shadow-[1px_1px_0px_rgba(0,0,0,0.5)] ${labelClassName}`}
+        className={`mt-1 block text-xs text-center text-black drop-shadow-[1px_1px_0px_rgba(0,0,0,0.5)] ${labelClassName}`}
       >
         {label}
       </span>

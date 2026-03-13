@@ -38,7 +38,6 @@ type OpenOrFocusWindowInput = {
 type MaximizeViewport = {
   width: number
   height: number
-  taskbarHeight: number
 }
 
 interface WindowStore {
@@ -50,6 +49,7 @@ interface WindowStore {
   closeWindow: (id: string) => void
   minimizeWindow: (id: string) => void
   toggleMaximizeWindow: (id: string, viewport: MaximizeViewport) => void
+  restoreFromMaximize: (id: string, position: { x: number; y: number }) => void
   restoreWindow: (id: string) => void
   focusWindow: (id: string) => void
   updateWindowPosition: (id: string, position: { x: number; y: number }) => void
@@ -69,7 +69,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
       isMinimized: false,
       isMaximized: false,
       position: { x: 50, y: 50 },
-      size: { width: 500, height: 300 },
+      size: { width: 700, height: 400 },
       restoreState: null,
       zIndex: 1,
     },
@@ -179,8 +179,26 @@ export const useWindowStore = create<WindowStore>((set) => ({
           position: { x: 0, y: 0 },
           size: {
             width: viewport.width,
-            height: Math.max(200, viewport.height - viewport.taskbarHeight),
+            height: Math.max(200, viewport.height),
           },
+          zIndex: state.nextZIndex,
+        }
+      }),
+      nextZIndex: state.nextZIndex + 1,
+    })),
+
+  restoreFromMaximize: (id, position) =>
+    set((state) => ({
+      windows: state.windows.map((w) => {
+        if (w.id !== id || !w.isMaximized) return w
+
+        const restoreSize = w.restoreState?.size ?? w.size
+        return {
+          ...w,
+          isMaximized: false,
+          position,
+          size: restoreSize,
+          restoreState: null,
           zIndex: state.nextZIndex,
         }
       }),
@@ -213,4 +231,3 @@ export const useWindowStore = create<WindowStore>((set) => ({
       windows: state.windows.map((w) => (w.id === id ? { ...w, size } : w)),
     })),
 }))
-

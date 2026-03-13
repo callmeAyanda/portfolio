@@ -32,15 +32,14 @@ export const useDraggable = ({ initialPosition, onDrag }: UseDraggableProps) => 
     }
   }, [])
 
-  const handleMouseDown = useCallback(
-    (e: ReactMouseEvent) => {
-      e.preventDefault()
+  const beginDrag = useCallback(
+    (clientX: number, clientY: number, anchorPosition: { x: number; y: number }) => {
       clearListeners()
 
       dragRef.current.isDragging = true
       dragRef.current.offset = {
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
+        x: clientX - anchorPosition.x,
+        y: clientY - anchorPosition.y,
       }
 
       const handleMouseMove = (event: MouseEvent) => {
@@ -63,10 +62,28 @@ export const useDraggable = ({ initialPosition, onDrag }: UseDraggableProps) => 
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [clearListeners, position.x, position.y]
+    [clearListeners]
+  )
+
+  const handleMouseDown = useCallback(
+    (e: ReactMouseEvent) => {
+      e.preventDefault()
+      beginDrag(e.clientX, e.clientY, position)
+    },
+    [beginDrag, position]
+  )
+
+  const startDragAt = useCallback(
+    (e: ReactMouseEvent, anchorPosition: { x: number; y: number }) => {
+      e.preventDefault()
+      setPosition(anchorPosition)
+      onDragRef.current(anchorPosition)
+      beginDrag(e.clientX, e.clientY, anchorPosition)
+    },
+    [beginDrag]
   )
 
   useEffect(() => clearListeners, [clearListeners])
 
-  return { position, handleMouseDown }
+  return { position, handleMouseDown, startDragAt }
 }

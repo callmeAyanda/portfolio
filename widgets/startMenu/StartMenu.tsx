@@ -19,7 +19,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({ onClose }) => {
       title,
       content: contentType,
       position: { x: 150, y: 150 },
-      size: { width: 500, height: 350 },
+      size: { width: 700, height: 400 },
     })
     onClose()
   }
