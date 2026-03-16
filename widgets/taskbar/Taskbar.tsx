@@ -15,8 +15,9 @@ export const Taskbar: React.FC = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const openWindows = windows.filter((w) => w.isOpen && !w.isMinimized)
-  const minimizedWindows = windows.filter((w) => w.isOpen && w.isMinimized)
+  const welcomeWindow = windows.find((w) => w.instanceKey === 'welcome')
+  const openWindows = windows.filter((w) => w.isOpen && !w.isMinimized && w.instanceKey !== 'welcome')
+  const minimizedWindows = windows.filter((w) => w.isOpen && w.isMinimized && w.instanceKey !== 'welcome')
 
   return (
     <div
@@ -38,6 +39,16 @@ export const Taskbar: React.FC = () => {
       </div>
 
       <div className="mx-2 flex flex-1 gap-1 overflow-x-auto">
+        {welcomeWindow && (
+          <button
+            className={`h-8 max-w-[150px] truncate px-3 text-sm ${
+              welcomeWindow.isMinimized ? 'border-sunken bg-window opacity-70' : 'border-raised bg-window'
+            }`}
+            onClick={() => restoreWindow(welcomeWindow.id)}
+          >
+            {welcomeWindow.title}
+          </button>
+        )}
         {openWindows.map((win) => (
           <button
             key={win.id}

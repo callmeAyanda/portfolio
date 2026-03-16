@@ -2,7 +2,16 @@
 
 import { create } from 'zustand'
 
-export type WindowContentType = 'welcome' | 'projects' | 'skills' | 'contact' | 'about' | 'projectDetail'
+export type WindowContentType =
+  | 'welcome'
+  | 'projects'
+  | 'skills'
+  | 'education'
+  | 'achievements'
+  | 'experience'
+  | 'contact'
+  | 'about'
+  | 'projectDetail'
 
 type WindowPayload = {
   projectId?: string
@@ -68,7 +77,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
       isOpen: true,
       isMinimized: false,
       isMaximized: false,
-      position: { x: 50, y: 50 },
+      position: { x: 150, y: 150 },
       size: { width: 700, height: 400 },
       restoreState: null,
       zIndex: 1,
@@ -145,7 +154,15 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   closeWindow: (id) =>
     set((state) => ({
-      windows: state.windows.map((w) => (w.id === id ? { ...w, isOpen: false } : w)),
+      windows: state.windows.map((w) => {
+        if (w.id !== id) return w
+
+        if (w.content === 'welcome') {
+          return { ...w, isOpen: true, isMinimized: true }
+        }
+
+        return { ...w, isOpen: false }
+      }),
     })),
 
   minimizeWindow: (id) =>

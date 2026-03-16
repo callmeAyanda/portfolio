@@ -5,7 +5,7 @@ import {
   useWindowStore,
   type WindowContentType,
 } from '@/features/windowManager/model/windowStore'
-import { Folder, FileText, Mail, User } from 'lucide-react'
+import { BriefcaseBusiness, FileText, Folder, GraduationCap, Mail, Trophy, User } from 'lucide-react'
 
 interface StartMenuProps {
   onClose: () => void
@@ -35,6 +35,9 @@ export const StartMenu: React.FC<StartMenuProps> = ({ onClose }) => {
         <div className="flex-1 p-1">
           <MenuItem icon={Folder} label="Projects" onClick={() => handleItemClick('projects', 'Projects')} />
           <MenuItem icon={FileText} label="Skills" onClick={() => handleItemClick('skills', 'Skills')} />
+          <MenuItem icon={GraduationCap} label="Education" onClick={() => handleItemClick('education', 'Education')} />
+          <MenuItem icon={Trophy} label="Achievements" onClick={() => handleItemClick('achievements', 'Achievements')} />
+          <MenuItem icon={BriefcaseBusiness} label="Experience" onClick={() => handleItemClick('experience', 'Experience')} />
           <MenuItem icon={Mail} label="Contact" onClick={() => handleItemClick('contact', 'Contact')} />
           <MenuItem icon={User} label="About Me" onClick={() => handleItemClick('about', 'About Me')} />
         </div>

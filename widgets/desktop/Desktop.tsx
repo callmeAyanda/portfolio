@@ -8,7 +8,7 @@ import {
 } from '@/features/windowManager/model/windowStore'
 import { PROJECTS_BY_ID, type ProjectRecord } from '@/entities/project/model/projects'
 import { Icon } from '@/_shared/ui/Icon'
-import { Folder, FileText, Mail, User } from 'lucide-react'
+import { BriefcaseBusiness, FileText, Folder, GraduationCap, Mail, Trophy, User } from 'lucide-react'
 import { Window } from '@/_shared/ui/Window'
 import { DesktopNameplate } from './DesktopNameplate'
 import { WelcomeContent } from './WelcomeContent'
@@ -17,6 +17,9 @@ import { SkillsContent } from './SkillsContent'
 import { ContactContent } from './ContactContent'
 import { AboutContent } from './AboutContent'
 import { ProjectDetailsContent } from './ProjectDetailsContent'
+import { EducationContent } from './EducationContent'
+import { AchievementsContent } from './AchievementsContent'
+import { ExperienceContent } from './ExperienceContent'
 
 const DESKTOP_NAME = 'AYANDA MAKHUBU'
 
@@ -28,6 +31,9 @@ const appMap: Array<{
 }> = [
   { icon: Folder, label: 'Projects', windowTitle: 'Projects', type: 'projects' },
   { icon: FileText, label: 'Skills', windowTitle: 'Skills', type: 'skills' },
+  { icon: GraduationCap, label: 'Education', windowTitle: 'Education', type: 'education' },
+  { icon: Trophy, label: 'Achievements', windowTitle: 'Achievements', type: 'achievements' },
+  { icon: BriefcaseBusiness, label: 'Experience', windowTitle: 'Experience', type: 'experience' },
   { icon: Mail, label: 'Contact Me', windowTitle: 'Contact', type: 'contact' },
   { icon: User, label: 'About Me', windowTitle: 'About Me', type: 'about' },
 ]
@@ -73,6 +79,12 @@ export const Desktop: React.FC = () => {
         return <ProjectsContent onOpenProject={openProjectWindow} />
       case 'skills':
         return <SkillsContent />
+      case 'education':
+        return <EducationContent />
+      case 'achievements':
+        return <AchievementsContent />
+      case 'experience':
+        return <ExperienceContent />
       case 'contact':
         return <ContactContent />
       case 'about':
@@ -104,7 +116,7 @@ export const Desktop: React.FC = () => {
     >
       <DesktopNameplate name={DESKTOP_NAME} />
 
-      <div className="relative z-0 grid grid-cols-[repeat(auto-fill,80px)] gap-4 p-4">
+      <div className="relative z-10 grid grid-cols-[repeat(auto-fill,80px)] gap-4 p-4">
         {appMap.map((app) => (
           <Icon
             key={app.type}
