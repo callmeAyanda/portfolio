@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Motion notes board</title>
+  <desc id="desc">Illustrated board of motion studies.</desc>
+  <rect width="1200" height="800" fill="#f8f5f0"/>
+  <rect x="72" y="62" width="1056" height="676" fill="#ffffff" stroke="#495057" stroke-width="8"/>
+  <rect x="72" y="62" width="1056" height="62" fill="#495057"/>
+  <text x="110" y="103" fill="#ffffff" font-family="Tahoma, sans-serif" font-size="28" font-weight="700">Motion Notes</text>
+  <g>
+    <rect x="120" y="160" width="280" height="220" fill="#ffe8cc"/>
+    <rect x="460" y="160" width="280" height="220" fill="#d8f3dc"/>
+    <rect x="800" y="160" width="280" height="220" fill="#dbeafe"/>
+    <rect x="120" y="430" width="280" height="220" fill="#f3d9fa"/>
+    <rect x="460" y="430" width="280" height="220" fill="#ffe5ec"/>
+    <rect x="800" y="430" width="280" height="220" fill="#e9ecef"/>
+  </g>
+  <g fill="#4a4a4a">
+    <rect x="150" y="198" width="180" height="18"/>
+    <rect x="150" y="232" width="204" height="14"/>
+    <rect x="150" y="258" width="188" height="14"/>
+    <rect x="490" y="198" width="180" height="18"/>
+    <rect x="830" y="198" width="180" height="18"/>
+  </g>
+</svg>

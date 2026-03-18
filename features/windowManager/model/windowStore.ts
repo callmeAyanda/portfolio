@@ -12,9 +12,13 @@ export type WindowContentType =
   | 'contact'
   | 'about'
   | 'projectDetail'
+  | 'imageViewer'
+  | 'videoViewer'
 
 type WindowPayload = {
   projectId?: string
+  imageId?: string
+  videoId?: string
 }
 
 export type WindowState = {
@@ -47,6 +51,26 @@ type OpenOrFocusWindowInput = {
 type MaximizeViewport = {
   width: number
   height: number
+}
+
+const toWindowId = (instanceKey: string) => instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')
+
+const getUniqueWindowId = (windows: WindowState[], instanceKey: string, content: WindowContentType) => {
+  const baseId = toWindowId(instanceKey || content)
+
+  if (!windows.some((window) => window.id === baseId)) {
+    return baseId
+  }
+
+  let suffix = 2
+  let candidateId = `${baseId}-${suffix}`
+
+  while (windows.some((window) => window.id === candidateId)) {
+    suffix += 1
+    candidateId = `${baseId}-${suffix}`
+  }
+
+  return candidateId
 }
 
 interface WindowStore {
@@ -126,7 +150,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
         windows: [
           ...state.windows,
           {
-            id: `${window.content}-1`,
+            id: getUniqueWindowId(state.windows, resolvedInstanceKey, window.content),
             title: window.title,
             content: window.content,
             instanceKey: resolvedInstanceKey,

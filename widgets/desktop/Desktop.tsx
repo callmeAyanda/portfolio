@@ -6,7 +6,7 @@ import {
   type WindowContentType,
   type WindowState,
 } from '@/features/windowManager/model/windowStore'
-import { PROJECTS_BY_ID, type ProjectRecord } from '@/entities/project/model/projects'
+import { PROJECTS_BY_ID, type ProjectImage, type ProjectRecord, type ProjectVideo } from '@/entities/project/model/projects'
 import { Icon } from '@/_shared/ui/Icon'
 import { BriefcaseBusiness, FileText, Folder, GraduationCap, Mail, Trophy, User } from 'lucide-react'
 import { Window } from '@/_shared/ui/Window'
@@ -20,6 +20,8 @@ import { ProjectDetailsContent } from './ProjectDetailsContent'
 import { EducationContent } from './EducationContent'
 import { AchievementsContent } from './AchievementsContent'
 import { ExperienceContent } from './ExperienceContent'
+import { ImagePreviewContent } from './ImagePreviewContent'
+import { VideoPreviewContent } from './VideoPreviewContent'
 
 const DESKTOP_NAME = 'AYANDA MAKHUBU'
 
@@ -27,7 +29,7 @@ const appMap: Array<{
   icon: React.ElementType
   label: string
   windowTitle: string
-  type: Exclude<WindowContentType, 'welcome' | 'projectDetail'>
+  type: Exclude<WindowContentType, 'welcome' | 'projectDetail' | 'imageViewer' | 'videoViewer'>
 }> = [
   { icon: Folder, label: 'Projects', windowTitle: 'Projects', type: 'projects' },
   { icon: FileText, label: 'Skills', windowTitle: 'Skills', type: 'skills' },
@@ -49,7 +51,10 @@ export const Desktop: React.FC = () => {
     return { x: baseX + step, y: baseY + step }
   }
 
-  const openDesktopApp = (contentType: Exclude<WindowContentType, 'welcome' | 'projectDetail'>, title: string) => {
+  const openDesktopApp = (
+    contentType: Exclude<WindowContentType, 'welcome' | 'projectDetail' | 'imageViewer' | 'videoViewer'>,
+    title: string
+  ) => {
     const position = getNextWindowPosition(100, 100)
     openOrFocusWindow({
       title,
@@ -71,12 +76,42 @@ export const Desktop: React.FC = () => {
     })
   }
 
+  const openProjectImageWindow = (project: ProjectRecord, image: ProjectImage) => {
+    const position = getNextWindowPosition(220, 140)
+    openOrFocusWindow({
+      title: `${project.title} - ${image.title}`,
+      content: 'imageViewer',
+      instanceKey: `project-image:${project.id}:${image.id}`,
+      payload: { projectId: project.id, imageId: image.id },
+      position,
+      size: { width: 760, height: 520 },
+    })
+  }
+
+  const openProjectVideoWindow = (project: ProjectRecord, video: ProjectVideo) => {
+    const position = getNextWindowPosition(240, 160)
+    openOrFocusWindow({
+      title: `${project.title} - ${video.title}`,
+      content: 'videoViewer',
+      instanceKey: `project-video:${project.id}:${video.id}`,
+      payload: { projectId: project.id, videoId: video.id },
+      position,
+      size: { width: 780, height: 560 },
+    })
+  }
+
   const renderWindowContent = (windowState: WindowState) => {
     switch (windowState.content) {
       case 'welcome':
         return <WelcomeContent />
       case 'projects':
-        return <ProjectsContent onOpenProject={openProjectWindow} />
+        return (
+          <ProjectsContent
+            onOpenProject={openProjectWindow}
+            onOpenImage={openProjectImageWindow}
+            onOpenVideo={openProjectVideoWindow}
+          />
+        )
       case 'skills':
         return <SkillsContent />
       case 'education':
@@ -97,7 +132,37 @@ export const Desktop: React.FC = () => {
           return <p className="text-sm">Project details could not be loaded.</p>
         }
 
-        return <ProjectDetailsContent project={project} />
+        return (
+          <ProjectDetailsContent
+            project={project}
+            onOpenImage={openProjectImageWindow}
+            onOpenVideo={openProjectVideoWindow}
+          />
+        )
+      }
+      case 'imageViewer': {
+        const projectId = windowState.payload?.projectId
+        const imageId = windowState.payload?.imageId
+        const project = projectId ? PROJECTS_BY_ID[projectId] : null
+        const image = project?.images.find((item) => item.id === imageId)
+
+        if (!project || !image) {
+          return <p className="text-sm">Image preview could not be loaded.</p>
+        }
+
+        return <ImagePreviewContent projectTitle={project.title} image={image} />
+      }
+      case 'videoViewer': {
+        const projectId = windowState.payload?.projectId
+        const videoId = windowState.payload?.videoId
+        const project = projectId ? PROJECTS_BY_ID[projectId] : null
+        const video = project?.videos.find((item) => item.id === videoId)
+
+        if (!project || !video) {
+          return <p className="text-sm">Video preview could not be loaded.</p>
+        }
+
+        return <VideoPreviewContent projectTitle={project.title} video={video} />
       }
       default:
         return null

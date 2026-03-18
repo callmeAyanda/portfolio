@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Motion notes detail</title>
+  <desc id="desc">Illustrated motion note detail page.</desc>
+  <rect width="1200" height="800" fill="#eef2f7"/>
+  <rect x="80" y="64" width="1040" height="672" fill="#ffffff" stroke="#33415c" stroke-width="8"/>
+  <rect x="80" y="64" width="1040" height="60" fill="#33415c"/>
+  <text x="116" y="104" fill="#ffffff" font-family="Tahoma, sans-serif" font-size="28" font-weight="700">Study Detail</text>
+  <rect x="126" y="164" width="430" height="324" fill="#dbeafe"/>
+  <rect x="596" y="164" width="470" height="44" fill="#e9ecef"/>
+  <rect x="596" y="232" width="430" height="16" fill="#e9ecef"/>
+  <rect x="596" y="262" width="410" height="16" fill="#e9ecef"/>
+  <rect x="596" y="292" width="450" height="16" fill="#e9ecef"/>
+  <rect x="596" y="342" width="196" height="40" fill="#ffd166"/>
+  <rect x="126" y="530" width="940" height="146" fill="#f8f9fa"/>
+  <rect x="164" y="566" width="860" height="18" fill="#d9d9d9"/>
+  <rect x="164" y="598" width="800" height="18" fill="#d9d9d9"/>
+  <rect x="164" y="630" width="780" height="18" fill="#d9d9d9"/>
+</svg>
