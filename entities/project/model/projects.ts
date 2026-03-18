@@ -9,6 +9,7 @@ export type ProjectImage = {
 export type ProjectVideo = {
   id: string
   title: string
+  alt: string
   src: string
   poster?: string
   caption: string
@@ -39,8 +40,8 @@ export type ProjectRecord = {
 
 export const PROJECTS: ProjectRecord[] = [
   {
-    id: 'retro-portfolio',
-    title: 'Retro Portfolio Desktop UI',
+    id: 'hr-intellect',
+    title: 'HR-Intellect',
     summary: 'A Windows 98 desktop portfolio with draggable windows, taskbar state, and playful app navigation.',
     description:
       'This project turns a personal portfolio into a nostalgic operating system experience, letting visitors explore work as if they were browsing a classic desktop computer.',
@@ -70,7 +71,7 @@ export const PROJECTS: ProjectRecord[] = [
       {
         id: 'desktop-home',
         title: 'Desktop Home',
-        src: '/project-media/retro-portfolio-desktop.svg',
+        src: '/project-media/login.png',
         alt: 'Retro portfolio desktop overview',
         caption: 'The opening desktop with app icons, taskbar, and the main welcome window.',
       },
@@ -86,101 +87,105 @@ export const PROJECTS: ProjectRecord[] = [
     githubUrl: 'https://github.com/example/retro-portfolio',
     links: [{ label: 'Live Demo', url: 'https://example.com/retro-portfolio' }],
   },
+
+/* DHMS */
   {
-    id: 'component-lab',
-    title: 'Component Lab',
-    summary: 'A reusable UI playground focused on design consistency, accessibility, and systemized components.',
-    description:
-      'Component Lab acts as a workshop for designing, documenting, and testing interface building blocks before they are used in larger products.',
-    stack: ['React', 'Storybook', 'TypeScript'],
+    id: 'dhms',
+    title: 'Digital Healthcare Management System',
+    summary: 'The Digital Healthcare Management System (DHMS) is an innovative, web-based platform designed to digitize and streamline healthcare delivery across clinics, hospitals, and community health centers. By connecting patients, healthcare providers, and administrators in one unified platform, DHMS simplifies appointment scheduling, electronic medical record (EMR) management, and administrative oversight ensuring faster, more efficient, and more transparent healthcare operations.',
+    description: 'DHMS provides a secure, cloud-based healthcare management solution that enables users to manage appointments, patient records, and healthcare operations from any internet enabled device.',
+    stack: ['React', 'TypeScript', 'Convex'],
     sections: [
       {
         title: 'What It Does',
         body: [
-          'Collects buttons, forms, cards, navigation patterns, and feedback states into a documented component library.',
-          'Helps product teams validate interaction details before implementation spreads across multiple screens.',
+          'Designed to digitize and streamline healthcare delivery across clinics, hospitals, and community health centers.',
         ],
       },
       {
         title: 'Problem Solved',
         body: [
-          'Without a shared library, interface decisions drift over time. This project creates a reliable source of truth for patterns, tokens, and usage guidance.',
+          'DHMS simplifies appointment scheduling, electronic medical record (EMR) management, and administrative oversight.',
         ],
       },
       {
         title: 'Notable Features',
         body: [
-          'Story-driven documentation, typed component APIs, and a workflow for testing accessibility and edge states early.',
+          'Appointment scheduling.',
+          'Electronic medical record (EMR) management.',
+          'Administrative oversight.',
         ],
       },
     ],
     images: [
       {
-        id: 'storybook-overview',
-        title: 'Storybook Overview',
-        src: '/project-media/component-lab-overview.svg',
-        alt: 'Component lab overview interface',
-        caption: 'A high-level look at the documented component catalog and design tokens.',
+        id: 'login-page',
+        title: 'Login Page',
+        src: '/project-media/dhms/login.png',
+        alt: 'Login page',
+        caption: 'A high-level look at the Login page for the DHMS.',
       },
       {
-        id: 'form-states',
-        title: 'Form States',
-        src: '/project-media/component-lab-forms.svg',
-        alt: 'Component lab form component states',
-        caption: 'Validation, success, and helper-text patterns captured in one workspace.',
+        id: 'prescriptions',
+        title: 'Prescriptions Page',
+        src: '/project-media/dhms/prescriptions.png',
+        alt: 'Prescription page',
+        caption: 'A high-level look at the Prescription page for the DHMS.',
       },
     ],
-    videos: [],
-    githubUrl: 'https://github.com/example/component-lab',
+    videos: [{ id: 'dhms-demo-vid', title: 'DHMS Demo Version 1', src: '/project-media/dhms/vid2.mp4', alt: 'DHMS demo video', caption: 'DHMS Demo Version 1' }],
+    githubUrl: 'https://github.com/callmeAyanda/digital_healthcare_management_system',
     links: [],
   },
+
+  /* GMUI */
   {
-    id: 'motion-notes',
-    title: 'Motion Notes',
-    summary: 'A lightweight study tool for capturing interaction ideas, motion references, and sharable feedback.',
+    id: 'gmui',
+    title: 'Golide Minerals UI',
+    summary: 'This project is a modern, fully responsive corporate landing page built for Golide Minerals Exchange, a global leader in mineral construction and infrastructure development. The website serves as a digital storefront, conveying the company’s expertise, global reach, and commitment to innovation through a sleek, professional, and interactive user experience.',
     description:
-      'Motion Notes is a focused app for designers and developers who want to collect short experiments, annotate them, and keep visual thinking organized.',
-    stack: ['Next.js', 'Framer Motion', 'Supabase'],
+      'The site is developed using Next.js 15 (App Router), React, and Tailwind CSS, ensuring optimal performance, SEO-friendliness, and maintainability.',
+    stack: ['Next.js', 'React', 'TailwindCSS', 'ShadcnUI', 'Lucide-react'],
     sections: [
       {
         title: 'What It Does',
         body: [
-          'Lets users save motion concepts, pair them with screenshots or references, and track why an interaction works.',
-          'Encourages structured critique so animation decisions stay connected to product goals.',
+          'Offers complete site navigation with a sticky navbar that includes smooth scrolling to each section, and a comprehensive footer with links, social media, and certifications.',
+          'Provides a knowledge hub (“Resources”) where users can browse whitepapers, case studies, and reports, with search, filtering, and newsletter signup.',
         ],
       },
       {
         title: 'Problem Solved',
         body: [
-          'Motion work is often scattered across notes, clips, and private experiments. This project keeps research and rationale in one searchable place.',
+          'This landing page solves all professional online presence issues by delivering a visually stunning, content-rich, and highly interactive platform that positions the company as an industry leader.',
         ],
       },
       {
         title: 'Notable Features',
         body: [
-          'Sharable notes, lightweight categorization, and a workflow built around explaining interaction intent rather than just storing assets.',
+          'Fully Responsive Design – Optimized for mobile, tablet, and desktop.',
         ],
       },
     ],
     images: [
       {
-        id: 'notes-board',
-        title: 'Notes Board',
-        src: '/project-media/motion-notes-board.svg',
-        alt: 'Motion notes board with entries and annotations',
-        caption: 'A board of saved interaction studies with tags and quick annotations.',
+        id: 'hero-section',
+        title: 'Hero Section',
+        src: '/project-media/gmui/hero.png',
+        alt: 'Hero Section picture',
+        caption: 'Golide Minerals Hero Section.',
       },
       {
-        id: 'entry-detail',
-        title: 'Entry Detail',
-        src: '/project-media/motion-notes-detail.svg',
-        alt: 'Motion notes detail view',
-        caption: 'A single study view showing rationale, implementation notes, and collaborators.',
+        id: 'footer',
+        title: 'Footer',
+        src: '/project-media/gmui/footer.png',
+        alt: 'Footer section',
+        caption: 'Footer Section',
       },
     ],
-    videos: [],
-    githubUrl: 'https://github.com/example/motion-notes',
-    links: [{ label: 'Live Demo', url: 'https://example.com/motion-notes' }],
+    videos: [{ id: 'gmui-demo-vid', title: 'GMUI Demo Version 1', src: '/project-media/gmui/vid1.mp4', alt: 'GMUI demo video', caption: 'GMUI Demo Version 1' }],
+    githubUrl: 'https://github.com/callmeAyanda/GolideMineralSolutions_',
+    links: [],
   },
 ]
 
