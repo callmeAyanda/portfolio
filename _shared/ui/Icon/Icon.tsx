@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import React from 'react'
 
@@ -24,9 +24,9 @@ export const Icon: React.FC<IconProps> = ({
   return (
     <button
       type="button"
-      className={`w-20 rounded p-2 text-left transition-shadow cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+      className={`w-20 cursor-pointer select-none rounded p-2 text-left transition-shadow touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
         selected
-          ? 'shadow-[2px_2px_0px_rgba(0,0,0,0.6)] bg-[rgba(0,0,128,0.25)]'
+          ? 'bg-[rgba(0,0,128,0.25)] shadow-[2px_2px_0px_rgba(0,0,0,0.6)]'
           : 'hover:shadow-[2px_2px_0px_rgba(0,0,0,0.45)]'
       } ${className}`}
       onClick={onClick}
@@ -36,11 +36,10 @@ export const Icon: React.FC<IconProps> = ({
         <IconComponent size={32} strokeWidth={1.5} className="text-black" />
       </div>
       <span
-        className={`mt-1 block text-xs text-center text-black drop-shadow-[1px_1px_0px_rgba(0,0,0,0.5)] ${labelClassName}`}
+        className={`mt-1 block text-center text-xs text-black drop-shadow-[1px_1px_0px_rgba(0,0,0,0.5)] ${labelClassName}`}
       >
         {label}
       </span>
     </button>
   )
 }
-

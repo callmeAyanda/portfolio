@@ -1,53 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { sendContactEmail } from '@/_shared/lib/contact/sendContactEmail'
+import {
+  getClientIpAddress,
+  isAllowedContactRequest,
+  rateLimitContactRequest,
+  verifyTurnstileToken,
+} from '@/_shared/lib/contact/contactProtection'
 import { contactSubmissionSchema } from '@/features/contactForm/model/contact.schema'
 
 export const runtime = 'nodejs'
 
 const MIN_FORM_FILL_TIME_MS = 3_000
-const RATE_LIMIT_WINDOW_MS = Number(process.env.CONTACT_RATE_LIMIT_WINDOW_MS ?? 10 * 60 * 1000)
-const RATE_LIMIT_MAX_REQUESTS = Number(process.env.CONTACT_RATE_LIMIT_MAX ?? 5)
-
-type RateLimitEntry = {
-  count: number
-  resetAt: number
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>()
-
-const getClientIp = (request: NextRequest) => {
-  const forwardedFor = request.headers.get('x-forwarded-for')
-
-  if (forwardedFor) {
-    return forwardedFor.split(',')[0]?.trim() ?? 'unknown'
-  }
-
-  return request.headers.get('x-real-ip') ?? 'unknown'
-}
-
-const isRateLimited = (ipAddress: string) => {
-  const now = Date.now()
-  const existingEntry = rateLimitStore.get(ipAddress)
-
-  if (!existingEntry || existingEntry.resetAt <= now) {
-    rateLimitStore.set(ipAddress, {
-      count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW_MS,
-    })
-
-    return false
-  }
-
-  if (existingEntry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return true
-  }
-
-  existingEntry.count += 1
-  return false
-}
 
 export async function POST(request: NextRequest) {
+  const contentType = request.headers.get('content-type') ?? ''
+
+  if (!contentType.includes('application/json')) {
+    return NextResponse.json(
+      { error: 'The contact form request must be sent as JSON.' },
+      { status: 415 },
+    )
+  }
+
+  if (!isAllowedContactRequest(request.headers)) {
+    return NextResponse.json(
+      { error: 'This request origin is not allowed.' },
+      {
+        status: 403,
+        headers: {
+          Vary: 'Origin, Referer',
+        },
+      },
+    )
+  }
+
   let payload: unknown
 
   try {
@@ -70,7 +57,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { website, formStartedAt, ...submission } = parsedSubmission.data
+  const clientIpAddress = getClientIpAddress(request.headers)
+  const { website, formStartedAt, turnstileToken, ...submission } = parsedSubmission.data
 
   if (website) {
     return NextResponse.json({
@@ -85,14 +73,33 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (isRateLimited(getClientIp(request))) {
+  const rateLimitResult = await rateLimitContactRequest(clientIpAddress)
+
+  if (!rateLimitResult.success) {
     return NextResponse.json(
       { error: 'Too many messages were sent from this connection. Please try again later.' },
-      { status: 429 },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(1, Math.ceil((rateLimitResult.reset - Date.now()) / 1_000))),
+          'X-RateLimit-Limit': String(rateLimitResult.limit),
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          'X-RateLimit-Reset': String(rateLimitResult.reset),
+        },
+      },
     )
   }
 
   try {
+    const turnstileVerification = await verifyTurnstileToken(turnstileToken, clientIpAddress)
+
+    if (!turnstileVerification.success) {
+      return NextResponse.json(
+        { error: 'The security check could not be verified. Please try again.' },
+        { status: 400 },
+      )
+    }
+
     await sendContactEmail(submission)
 
     return NextResponse.json({

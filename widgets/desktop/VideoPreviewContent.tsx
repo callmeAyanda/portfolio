@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Pause, Play, RotateCcw, SkipBack, SkipForward } from 'lucide-react'
@@ -105,7 +105,14 @@ export const VideoPreviewContent: React.FC<VideoPreviewContentProps> = ({ projec
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col border-sunken bg-black p-2">
-        <video ref={videoRef} src={video.src} poster={video.poster} className="min-h-0 flex-1 bg-black" />
+        <video
+          ref={videoRef}
+          src={video.src}
+          poster={video.poster}
+          preload="metadata"
+          playsInline
+          className="min-h-0 flex-1 bg-black"
+        />
       </div>
 
       <div className="border-raised bg-[#d7d7d7] p-2">

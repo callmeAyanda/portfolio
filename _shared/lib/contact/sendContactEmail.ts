@@ -17,6 +17,8 @@ type ContactMailConfig = {
 let cachedTransporter: nodemailer.Transporter | null = null
 let cachedConfigKey: string | null = null
 
+const RETRY_DELAYS_MS = [500, 1_000, 2_000]
+
 const getContactMailConfig = (): ContactMailConfig => {
   const {
     CONTACT_DESTINATION_EMAIL,
@@ -59,9 +61,17 @@ const getTransporter = (config: ContactMailConfig) => {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      requireTLS: !config.secure,
       auth: {
         user: config.user,
         pass: config.password,
+      },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
+      tls: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true,
       },
     })
     cachedConfigKey = configKey
@@ -69,6 +79,11 @@ const getTransporter = (config: ContactMailConfig) => {
 
   return cachedTransporter
 }
+
+const sleep = (durationMs: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, durationMs)
+  })
 
 export const sendContactEmail = async (submission: ContactFormData) => {
   const config = getContactMailConfig()
@@ -85,11 +100,34 @@ export const sendContactEmail = async (submission: ContactFormData) => {
     submission.message,
   ].join('\n')
 
-  await transporter.sendMail({
-    from: config.fromEmail,
-    to: config.destinationEmail,
-    replyTo: submission.email,
-    subject: `[Portfolio Contact] ${submission.subject}`,
-    text,
-  })
+  let lastError: unknown
+
+  for (const retryDelayMs of RETRY_DELAYS_MS) {
+    try {
+      await transporter.sendMail({
+        from: config.fromEmail,
+        to: config.destinationEmail,
+        replyTo: submission.email,
+        subject: `[Portfolio Contact] ${submission.subject}`,
+        text,
+      })
+
+      return
+    } catch (error) {
+      lastError = error
+      await sleep(retryDelayMs)
+    }
+  }
+
+  try {
+    await transporter.sendMail({
+      from: config.fromEmail,
+      to: config.destinationEmail,
+      replyTo: submission.email,
+      subject: `[Portfolio Contact] ${submission.subject}`,
+      text,
+    })
+  } catch (error) {
+    throw error ?? lastError
+  }
 }

@@ -1,52 +1,84 @@
 'use client'
 
-import React, { useCallback, useRef } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { X, Minus, Square } from 'lucide-react'
-import { useWindowStore } from '@/features/windowManager/model/windowStore'
+import { useShallow } from 'zustand/react/shallow'
+import { selectWindowById, useWindowStore } from '@/features/windowManager/model/windowStore'
 import { useDraggable } from '@/_shared/lib/hooks/useDraggable'
 
 interface WindowProps {
   id: string
-  title: string
   children: React.ReactNode
-  initialPosition: { x: number; y: number }
-  initialSize: { width: number; height: number }
 }
 
-export const Window: React.FC<WindowProps> = ({
-  id,
-  title,
-  children,
-  initialPosition,
-  initialSize,
-}) => {
+const MIN_WINDOW_WIDTH = 280
+const MIN_WINDOW_HEIGHT = 220
+const WINDOW_EDGE_GAP = 8
+
+type WindowViewport = {
+  width: number
+  height: number
+}
+
+const clampWindowSize = (size: { width: number; height: number }, viewport: WindowViewport) => ({
+  width: Math.min(Math.max(MIN_WINDOW_WIDTH, size.width), Math.max(MIN_WINDOW_WIDTH, viewport.width)),
+  height: Math.min(Math.max(MIN_WINDOW_HEIGHT, size.height), Math.max(MIN_WINDOW_HEIGHT, viewport.height)),
+})
+
+const clampWindowPosition = (
+  position: { x: number; y: number },
+  size: { width: number; height: number },
+  viewport: WindowViewport,
+) => {
+  const maxX = Math.max(WINDOW_EDGE_GAP, viewport.width - size.width - WINDOW_EDGE_GAP)
+  const maxY = Math.max(WINDOW_EDGE_GAP, viewport.height - size.height - WINDOW_EDGE_GAP)
+
+  return {
+    x: Math.min(maxX, Math.max(WINDOW_EDGE_GAP, position.x)),
+    y: Math.min(maxY, Math.max(WINDOW_EDGE_GAP, position.y)),
+  }
+}
+
+export const Window: React.FC<WindowProps> = ({ id, children }) => {
+  const selectWindow = useMemo(() => selectWindowById(id), [id])
+  const windowData = useWindowStore(selectWindow)
   const {
-    focusWindow,
     closeWindow,
+    focusWindow,
     minimizeWindow,
-    toggleMaximizeWindow,
     restoreFromMaximize,
+    toggleMaximizeWindow,
     updateWindowPosition,
     updateWindowSize,
-    windows,
-  } = useWindowStore()
-  const windowData = windows.find((w) => w.id === id)
-  const zIndex = windowData?.zIndex ?? 1
-  const size = windowData?.size ?? initialSize
-  const isMaximized = windowData?.isMaximized ?? false
-  const startResizeRef = useRef<{
-    mouseX: number
-    mouseY: number
-    width: number
-    height: number
+  } = useWindowStore(
+    useShallow((state) => ({
+      closeWindow: state.closeWindow,
+      focusWindow: state.focusWindow,
+      minimizeWindow: state.minimizeWindow,
+      restoreFromMaximize: state.restoreFromMaximize,
+      toggleMaximizeWindow: state.toggleMaximizeWindow,
+      updateWindowPosition: state.updateWindowPosition,
+      updateWindowSize: state.updateWindowSize,
+    })),
+  )
+  const [isResizing, setIsResizing] = useState(false)
+  const [draftSize, setDraftSize] = useState(windowData?.size ?? { width: 700, height: 400 })
+  const draftSizeRef = useRef(windowData?.size ?? { width: 700, height: 400 })
+  const resizeStateRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    size: { width: number; height: number }
   } | null>(null)
 
-  const { position, handleMouseDown, startDragAt } = useDraggable({
-    initialPosition: windowData?.position ?? initialPosition,
-    onDrag: (newPos) => updateWindowPosition(id, newPos),
-  })
-
   const getDesktopViewport = useCallback(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return {
+        width: 1024,
+        height: 768,
+      }
+    }
+
     const desktopRoot = document.querySelector('[data-desktop-root]') as HTMLElement | null
     const taskbar = document.querySelector('[data-taskbar-root]') as HTMLElement | null
 
@@ -62,106 +94,178 @@ export const Window: React.FC<WindowProps> = ({
 
     return {
       width: rect.width,
-      height: Math.max(200, rect.height - taskbarHeight),
+      height: Math.max(MIN_WINDOW_HEIGHT, rect.height - taskbarHeight),
     }
   }, [])
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      startResizeRef.current = {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
-        width: size.width,
-        height: size.height,
+  const { position, handlePointerDown, startDragAt } = useDraggable({
+    initialPosition: windowData?.position ?? { x: 120, y: 120 },
+    disabled: !windowData || windowData.isMaximized,
+    onDragEnd: (nextPosition) => {
+      if (!windowData) {
+        return
       }
 
-      const handleResizeMove = (event: MouseEvent) => {
-        if (!startResizeRef.current) return
-
-        const deltaX = event.clientX - startResizeRef.current.mouseX
-        const deltaY = event.clientY - startResizeRef.current.mouseY
-
-        updateWindowSize(id, {
-          width: Math.max(320, startResizeRef.current.width + deltaX),
-          height: Math.max(200, startResizeRef.current.height + deltaY),
-        })
-      }
-
-      const handleResizeEnd = () => {
-        startResizeRef.current = null
-        document.removeEventListener('mousemove', handleResizeMove)
-        document.removeEventListener('mouseup', handleResizeEnd)
-      }
-
-      document.addEventListener('mousemove', handleResizeMove)
-      document.addEventListener('mouseup', handleResizeEnd)
+      const viewport = getDesktopViewport()
+      const safeSize = clampWindowSize(windowData.size, viewport)
+      updateWindowPosition(id, clampWindowPosition(nextPosition, safeSize, viewport))
     },
-    [id, size.height, size.width, updateWindowSize]
+  })
+
+  const effectiveWindow = useMemo(() => {
+    if (!windowData) {
+      return null
+    }
+
+    const viewport = getDesktopViewport()
+    const baseSize = isResizing ? draftSize : windowData.size
+    const safeSize = clampWindowSize(baseSize, viewport)
+
+    return {
+      ...windowData,
+      size: safeSize,
+      position: clampWindowPosition(position, safeSize, viewport),
+    }
+  }, [draftSize, getDesktopViewport, isResizing, position, windowData])
+
+  const handleResizeStart = useCallback(
+    (event: React.PointerEvent) => {
+      if (!effectiveWindow) {
+        return
+      }
+
+      if (event.pointerType !== 'touch' && event.button !== 0) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      setIsResizing(true)
+      resizeStateRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        size: effectiveWindow.size,
+      }
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (!resizeStateRef.current || moveEvent.pointerId !== resizeStateRef.current.pointerId) {
+          return
+        }
+
+        const viewport = getDesktopViewport()
+        const deltaX = moveEvent.clientX - resizeStateRef.current.startX
+        const deltaY = moveEvent.clientY - resizeStateRef.current.startY
+
+        setDraftSize(
+          clampWindowSize(
+            {
+              width: resizeStateRef.current.size.width + deltaX,
+              height: resizeStateRef.current.size.height + deltaY,
+            },
+            viewport,
+          ),
+        )
+        draftSizeRef.current = clampWindowSize(
+          {
+            width: resizeStateRef.current.size.width + deltaX,
+            height: resizeStateRef.current.size.height + deltaY,
+          },
+          viewport,
+        )
+      }
+
+      const handlePointerEnd = (pointerEvent: PointerEvent) => {
+        if (!resizeStateRef.current || pointerEvent.pointerId !== resizeStateRef.current.pointerId) {
+          return
+        }
+
+        const viewport = getDesktopViewport()
+        const nextSize = clampWindowSize(draftSizeRef.current, viewport)
+
+        setIsResizing(false)
+        resizeStateRef.current = null
+        updateWindowSize(id, nextSize)
+        window.removeEventListener('pointermove', handlePointerMove)
+        window.removeEventListener('pointerup', handlePointerEnd)
+        window.removeEventListener('pointercancel', handlePointerEnd)
+      }
+
+      window.addEventListener('pointermove', handlePointerMove)
+      window.addEventListener('pointerup', handlePointerEnd)
+      window.addEventListener('pointercancel', handlePointerEnd)
+    },
+    [effectiveWindow, getDesktopViewport, id, updateWindowSize],
   )
 
-  const handleTitleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement | null
+  const handleTitlePointerDown = useCallback(
+    (event: React.PointerEvent) => {
+      const target = event.target as HTMLElement | null
+
       if (target?.closest('[data-window-control]')) {
         return
       }
 
-      if (!isMaximized) {
-        handleMouseDown(e)
+      if (!windowData) {
         return
       }
 
-      e.stopPropagation()
-
-      const restoredSize = windowData?.restoreState?.size ?? { width: 700, height: 400 }
-      const viewport = getDesktopViewport()
-      const maxX = Math.max(0, viewport.width - restoredSize.width)
-      const maxY = Math.max(0, viewport.height - restoredSize.height)
-      const restoredPosition = {
-        x: Math.min(maxX, Math.max(0, e.clientX - restoredSize.width / 2)),
-        y: Math.min(maxY, Math.max(0, e.clientY - 18)),
+      if (!windowData.isMaximized) {
+        handlePointerDown(event)
+        return
       }
 
+      event.stopPropagation()
+
+      const viewport = getDesktopViewport()
+      const restoredSize = clampWindowSize(
+        windowData.restoreState?.size ?? { width: 700, height: 400 },
+        viewport,
+      )
+      const restoredPosition = clampWindowPosition(
+        {
+          x: event.clientX - restoredSize.width / 2,
+          y: event.clientY - 18,
+        },
+        restoredSize,
+        viewport,
+      )
+
       restoreFromMaximize(id, restoredPosition)
-      startDragAt(e, restoredPosition)
+      startDragAt(event, restoredPosition)
     },
-    [
-      getDesktopViewport,
-      handleMouseDown,
-      id,
-      isMaximized,
-      restoreFromMaximize,
-      startDragAt,
-      windowData?.restoreState?.size,
-    ]
+    [getDesktopViewport, handlePointerDown, id, restoreFromMaximize, startDragAt, windowData],
   )
+
+  if (!effectiveWindow) {
+    return null
+  }
 
   return (
     <div
-      className="absolute bg-window border-raised shadow-lg pointer-events-auto"
+      className="absolute bg-window border-raised shadow-lg pointer-events-auto touch-none"
       style={{
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: size.height,
-        zIndex,
+        left: effectiveWindow.position.x,
+        top: effectiveWindow.position.y,
+        width: effectiveWindow.size.width,
+        height: effectiveWindow.size.height,
+        zIndex: effectiveWindow.zIndex,
       }}
-      onMouseDown={() => focusWindow(id)}
+      onPointerDown={() => focusWindow(id)}
     >
-      {/* Title Bar */}
       <div
-        className="flex items-center justify-between h-7 px-2 bg-title-bar-active border-b-2 border-b-border-dark cursor-move"
-        onMouseDown={handleTitleMouseDown}
+        className="flex h-7 cursor-move touch-none items-center justify-between border-b-2 border-b-border-dark bg-title-bar-active px-2"
+        onPointerDown={handleTitlePointerDown}
       >
-        <span className="text-white font-bold text-sm">{title}</span>
+        <span className="text-sm font-bold text-white">{effectiveWindow.title}</span>
         <div className="flex gap-1">
           <button
             data-window-control
-            className="w-6 h-6 flex items-center justify-center bg-window border-raised active:border-sunken text-black"
-            onClick={(e) => {
-              e.stopPropagation()
+            type="button"
+            className="flex h-6 w-6 items-center justify-center border-raised bg-window text-black active:border-sunken"
+            onClick={(event) => {
+              event.stopPropagation()
               minimizeWindow(id)
             }}
           >
@@ -169,9 +273,10 @@ export const Window: React.FC<WindowProps> = ({
           </button>
           <button
             data-window-control
-            className="w-6 h-6 flex items-center justify-center bg-window border-raised active:border-sunken text-black"
-            onClick={(e) => {
-              e.stopPropagation()
+            type="button"
+            className="flex h-6 w-6 items-center justify-center border-raised bg-window text-black active:border-sunken"
+            onClick={(event) => {
+              event.stopPropagation()
               const viewport = getDesktopViewport()
               toggleMaximizeWindow(id, {
                 width: viewport.width,
@@ -183,9 +288,10 @@ export const Window: React.FC<WindowProps> = ({
           </button>
           <button
             data-window-control
-            className="w-6 h-6 flex items-center justify-center bg-window border-raised active:border-sunken text-black"
-            onClick={(e) => {
-              e.stopPropagation()
+            type="button"
+            className="flex h-6 w-6 items-center justify-center border-raised bg-window text-black active:border-sunken"
+            onClick={(event) => {
+              event.stopPropagation()
               closeWindow(id)
             }}
           >
@@ -194,17 +300,14 @@ export const Window: React.FC<WindowProps> = ({
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="p-2 h-[calc(100%-1.75rem)] overflow-auto">
-        {children}
-      </div>
-      {!isMaximized && (
+      <div className="h-[calc(100%-1.75rem)] overflow-auto p-2">{children}</div>
+
+      {!effectiveWindow.isMaximized ? (
         <div
-          className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-window border-t-2 border-l-2 border-border-dark"
-          onMouseDown={handleResizeStart}
+          className="absolute bottom-0 right-0 h-5 w-5 cursor-se-resize border-l-2 border-t-2 border-border-dark bg-window touch-none"
+          onPointerDown={handleResizeStart}
         />
-      )}
+      ) : null}
     </div>
   )
 }
-

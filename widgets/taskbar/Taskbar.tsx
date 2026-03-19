@@ -1,23 +1,36 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useWindowStore } from '@/features/windowManager/model/windowStore'
 import { Button } from '@/_shared/ui/Button'
 import { StartMenu } from '../startMenu/StartMenu'
 
 export const Taskbar: React.FC = () => {
-  const { windows, restoreWindow } = useWindowStore()
+  const restoreWindow = useWindowStore((state) => state.restoreWindow)
+  const windows = useWindowStore((state) => state.windows)
   const [time, setTime] = useState(new Date())
   const [showStartMenu, setShowStartMenu] = useState(false)
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000)
+    const timer = setInterval(() => setTime(new Date()), 1_000)
     return () => clearInterval(timer)
   }, [])
 
-  const welcomeWindow = windows.find((w) => w.instanceKey === 'welcome')
-  const openWindows = windows.filter((w) => w.isOpen && !w.isMinimized && w.instanceKey !== 'welcome')
-  const minimizedWindows = windows.filter((w) => w.isOpen && w.isMinimized && w.instanceKey !== 'welcome')
+  const { welcomeWindow, openWindows, minimizedWindows } = useMemo(() => {
+    const welcome = windows.find((window) => window.instanceKey === 'welcome') ?? null
+    const open = windows.filter(
+      (window) => window.isOpen && !window.isMinimized && window.instanceKey !== 'welcome',
+    )
+    const minimized = windows.filter(
+      (window) => window.isOpen && window.isMinimized && window.instanceKey !== 'welcome',
+    )
+
+    return {
+      welcomeWindow: welcome,
+      openWindows: open,
+      minimizedWindows: minimized,
+    }
+  }, [windows])
 
   return (
     <div
@@ -35,12 +48,13 @@ export const Taskbar: React.FC = () => {
           </span>
           Start
         </Button>
-        {showStartMenu && <StartMenu onClose={() => setShowStartMenu(false)} />}
+        {showStartMenu ? <StartMenu onClose={() => setShowStartMenu(false)} /> : null}
       </div>
 
       <div className="mx-2 flex flex-1 gap-1 overflow-x-auto">
-        {welcomeWindow && (
+        {welcomeWindow ? (
           <button
+            type="button"
             className={`h-8 max-w-[150px] truncate px-3 text-sm ${
               welcomeWindow.isMinimized ? 'border-sunken bg-window opacity-70' : 'border-raised bg-window'
             }`}
@@ -48,23 +62,25 @@ export const Taskbar: React.FC = () => {
           >
             {welcomeWindow.title}
           </button>
-        )}
-        {openWindows.map((win) => (
+        ) : null}
+        {openWindows.map((window) => (
           <button
-            key={win.id}
+            key={window.id}
+            type="button"
             className="h-8 max-w-[150px] truncate border-raised bg-window px-3 text-sm active:border-sunken"
-            onClick={() => restoreWindow(win.id)}
+            onClick={() => restoreWindow(window.id)}
           >
-            {win.title}
+            {window.title}
           </button>
         ))}
-        {minimizedWindows.map((win) => (
+        {minimizedWindows.map((window) => (
           <button
-            key={win.id}
+            key={window.id}
+            type="button"
             className="h-8 max-w-[150px] truncate border-sunken bg-window px-3 text-sm opacity-70"
-            onClick={() => restoreWindow(win.id)}
+            onClick={() => restoreWindow(window.id)}
           >
-            {win.title}
+            {window.title}
           </button>
         ))}
       </div>

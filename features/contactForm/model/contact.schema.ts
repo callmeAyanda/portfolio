@@ -23,6 +23,7 @@ export const contactSchema = z.object({
 export const contactSubmissionSchema = contactSchema.extend({
   website: z.string().max(0),
   formStartedAt: z.number().int().nonnegative(),
+  turnstileToken: z.string().trim().min(1, 'Please complete the security check'),
 })
 
 export type ContactFormData = z.infer<typeof contactSchema>

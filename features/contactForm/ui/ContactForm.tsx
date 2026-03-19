@@ -9,6 +9,9 @@ import {
   ContactSubmissionData,
 } from '../model/contact.schema'
 import { Button } from '@/_shared/ui/Button'
+import { TurnstileWidget } from './TurnstileWidget'
+
+const getCurrentTimestamp = () => new Date().getTime()
 
 const createEmptyFormValues = (formStartedAt: number): ContactSubmissionData => ({
   name: '',
@@ -17,20 +20,24 @@ const createEmptyFormValues = (formStartedAt: number): ContactSubmissionData => 
   message: '',
   website: '',
   formStartedAt,
+  turnstileToken: '',
 })
 
 export const ContactForm: React.FC = () => {
-  const [initialFormStartedAt] = React.useState(() => Date.now())
+  const [initialFormStartedAt] = React.useState(() => getCurrentTimestamp())
   const [submitState, setSubmitState] = React.useState<{
     tone: 'success' | 'error'
     message: string
   } | null>(null)
+  const [turnstileResetCounter, setTurnstileResetCounter] = React.useState(0)
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<ContactSubmissionData>({
     resolver: zodResolver(contactSubmissionSchema),
     defaultValues: createEmptyFormValues(initialFormStartedAt),
@@ -63,6 +70,7 @@ export const ContactForm: React.FC = () => {
         | null
 
       if (!response.ok) {
+        setTurnstileResetCounter((currentValue) => currentValue + 1)
         setSubmitState({
           tone: 'error',
           message: result?.error ?? 'Something went wrong while sending your message.',
@@ -74,8 +82,11 @@ export const ContactForm: React.FC = () => {
         tone: 'success',
         message: result?.message ?? 'Message sent successfully.',
       })
-      reset(createEmptyFormValues(initialFormStartedAt))
+      const nextFormStartedAt = getCurrentTimestamp()
+      setTurnstileResetCounter((currentValue) => currentValue + 1)
+      reset(createEmptyFormValues(nextFormStartedAt))
     } catch {
+      setTurnstileResetCounter((currentValue) => currentValue + 1)
       setSubmitState({
         tone: 'error',
         message: 'Unable to reach the contact service right now. Please try again later.',
@@ -93,6 +104,7 @@ export const ContactForm: React.FC = () => {
         className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden"
       />
       <input type="hidden" {...register('formStartedAt', { valueAsNumber: true })} />
+      <input type="hidden" {...register('turnstileToken')} />
       <div>
         <label className="block text-sm font-bold mb-1">Name</label>
         <input
@@ -130,6 +142,21 @@ export const ContactForm: React.FC = () => {
           className="w-full p-1 border-2 border-border-dark border-t-border-darker border-l-border-darker bg-white"
         />
         {errors.message && <p className="text-red-600 text-xs mt-1">{errors.message.message}</p>}
+      </div>
+      <div>
+        <TurnstileWidget
+          siteKey={turnstileSiteKey}
+          resetSignal={turnstileResetCounter}
+          onTokenChange={(token) => {
+            setValue('turnstileToken', token, {
+              shouldDirty: token.length > 0,
+              shouldValidate: token.length > 0,
+            })
+          }}
+        />
+        {errors.turnstileToken && (
+          <p className="text-red-600 text-xs mt-1">{errors.turnstileToken.message}</p>
+        )}
       </div>
       {submitState && (
         <div

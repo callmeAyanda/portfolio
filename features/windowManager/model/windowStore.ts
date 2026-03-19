@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import { create } from 'zustand'
 
@@ -53,6 +53,22 @@ type MaximizeViewport = {
   height: number
 }
 
+export interface WindowStore {
+  windows: WindowState[]
+  nextZIndex: number
+  addWindow: (window: Omit<WindowState, 'zIndex'>) => void
+  openOrFocusWindow: (window: OpenOrFocusWindowInput) => void
+  openWindow: (id: string) => void
+  closeWindow: (id: string) => void
+  minimizeWindow: (id: string) => void
+  toggleMaximizeWindow: (id: string, viewport: MaximizeViewport) => void
+  restoreFromMaximize: (id: string, position: { x: number; y: number }) => void
+  restoreWindow: (id: string) => void
+  focusWindow: (id: string) => void
+  updateWindowPosition: (id: string, position: { x: number; y: number }) => void
+  updateWindowSize: (id: string, size: { width: number; height: number }) => void
+}
+
 const toWindowId = (instanceKey: string) => instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')
 
 const getUniqueWindowId = (windows: WindowState[], instanceKey: string, content: WindowContentType) => {
@@ -73,25 +89,8 @@ const getUniqueWindowId = (windows: WindowState[], instanceKey: string, content:
   return candidateId
 }
 
-interface WindowStore {
-  windows: WindowState[]
-  nextZIndex: number
-  addWindow: (window: Omit<WindowState, 'zIndex'>) => void
-  openOrFocusWindow: (window: OpenOrFocusWindowInput) => void
-  openWindow: (id: string) => void
-  closeWindow: (id: string) => void
-  minimizeWindow: (id: string) => void
-  toggleMaximizeWindow: (id: string, viewport: MaximizeViewport) => void
-  restoreFromMaximize: (id: string, position: { x: number; y: number }) => void
-  restoreWindow: (id: string) => void
-  focusWindow: (id: string) => void
-  updateWindowPosition: (id: string, position: { x: number; y: number }) => void
-  updateWindowSize: (id: string, size: { width: number; height: number }) => void
-}
-
 export const useWindowStore = create<WindowStore>((set) => ({
   windows: [
-    // Initial windows (maybe one open by default, e.g., 'welcome')
     {
       id: 'welcome-1',
       title: 'Welcome',
@@ -124,23 +123,21 @@ export const useWindowStore = create<WindowStore>((set) => ({
   openOrFocusWindow: (window) =>
     set((state) => {
       const resolvedInstanceKey = window.instanceKey ?? window.content
-      const existingWindow = state.windows.find((w) => w.instanceKey === resolvedInstanceKey)
+      const existingWindow = state.windows.find((entry) => entry.instanceKey === resolvedInstanceKey)
 
       if (existingWindow) {
         return {
-          windows: state.windows.map((w) =>
-            w.id === existingWindow.id
+          windows: state.windows.map((entry) =>
+            entry.id === existingWindow.id
               ? {
-                  ...w,
+                  ...entry,
                   title: window.title,
-                  payload: window.payload ?? w.payload,
+                  payload: window.payload ?? entry.payload,
                   isOpen: true,
                   isMinimized: false,
-                  isMaximized: false,
-                  restoreState: null,
                   zIndex: state.nextZIndex,
                 }
-              : w
+              : entry,
           ),
           nextZIndex: state.nextZIndex + 1,
         }
@@ -170,52 +167,56 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   openWindow: (id) =>
     set((state) => ({
-      windows: state.windows.map((w) =>
-        w.id === id ? { ...w, isOpen: true, isMinimized: false, zIndex: state.nextZIndex } : w
+      windows: state.windows.map((window) =>
+        window.id === id
+          ? { ...window, isOpen: true, isMinimized: false, zIndex: state.nextZIndex }
+          : window,
       ),
       nextZIndex: state.nextZIndex + 1,
     })),
 
   closeWindow: (id) =>
     set((state) => ({
-      windows: state.windows.map((w) => {
-        if (w.id !== id) return w
+      windows: state.windows.map((window) => {
+        if (window.id !== id) return window
 
-        if (w.content === 'welcome') {
-          return { ...w, isOpen: true, isMinimized: true }
+        if (window.content === 'welcome') {
+          return { ...window, isOpen: true, isMinimized: true }
         }
 
-        return { ...w, isOpen: false }
+        return { ...window, isOpen: false }
       }),
     })),
 
   minimizeWindow: (id) =>
     set((state) => ({
-      windows: state.windows.map((w) => (w.id === id ? { ...w, isMinimized: true } : w)),
+      windows: state.windows.map((window) =>
+        window.id === id ? { ...window, isMinimized: true } : window,
+      ),
     })),
 
   toggleMaximizeWindow: (id, viewport) =>
     set((state) => ({
-      windows: state.windows.map((w) => {
-        if (w.id !== id) return w
+      windows: state.windows.map((window) => {
+        if (window.id !== id) return window
 
-        if (w.isMaximized && w.restoreState) {
+        if (window.isMaximized && window.restoreState) {
           return {
-            ...w,
+            ...window,
             isMaximized: false,
-            position: w.restoreState.position,
-            size: w.restoreState.size,
+            position: window.restoreState.position,
+            size: window.restoreState.size,
             restoreState: null,
             zIndex: state.nextZIndex,
           }
         }
 
         return {
-          ...w,
+          ...window,
           isMaximized: true,
           restoreState: {
-            position: w.position,
-            size: w.size,
+            position: window.position,
+            size: window.size,
           },
           position: { x: 0, y: 0 },
           size: {
@@ -230,12 +231,12 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   restoreFromMaximize: (id, position) =>
     set((state) => ({
-      windows: state.windows.map((w) => {
-        if (w.id !== id || !w.isMaximized) return w
+      windows: state.windows.map((window) => {
+        if (window.id !== id || !window.isMaximized) return window
 
-        const restoreSize = w.restoreState?.size ?? w.size
+        const restoreSize = window.restoreState?.size ?? window.size
         return {
-          ...w,
+          ...window,
           isMaximized: false,
           position,
           size: restoreSize,
@@ -248,27 +249,53 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   restoreWindow: (id) =>
     set((state) => ({
-      windows: state.windows.map((w) =>
-        w.id === id ? { ...w, isMinimized: false, zIndex: state.nextZIndex } : w
+      windows: state.windows.map((window) =>
+        window.id === id ? { ...window, isMinimized: false, zIndex: state.nextZIndex } : window,
       ),
       nextZIndex: state.nextZIndex + 1,
     })),
 
   focusWindow: (id) =>
     set((state) => ({
-      windows: state.windows.map((w) =>
-        w.id === id ? { ...w, zIndex: state.nextZIndex } : w
+      windows: state.windows.map((window) =>
+        window.id === id ? { ...window, zIndex: state.nextZIndex } : window,
       ),
       nextZIndex: state.nextZIndex + 1,
     })),
 
   updateWindowPosition: (id, position) =>
     set((state) => ({
-      windows: state.windows.map((w) => (w.id === id ? { ...w, position } : w)),
+      windows: state.windows.map((window) =>
+        window.id === id ? { ...window, position } : window,
+      ),
     })),
 
   updateWindowSize: (id, size) =>
     set((state) => ({
-      windows: state.windows.map((w) => (w.id === id ? { ...w, size } : w)),
+      windows: state.windows.map((window) => (window.id === id ? { ...window, size } : window)),
     })),
 }))
+
+export const selectVisibleWindowIds = (state: WindowStore) =>
+  state.windows.filter((window) => window.isOpen && !window.isMinimized).map((window) => window.id)
+
+export const selectWindowById =
+  (id: string) =>
+  (state: WindowStore): WindowState | null =>
+    state.windows.find((window) => window.id === id) ?? null
+
+export const selectTaskbarWindows = (state: WindowStore) => {
+  const welcomeWindow = state.windows.find((window) => window.instanceKey === 'welcome') ?? null
+  const openWindows = state.windows.filter(
+    (window) => window.isOpen && !window.isMinimized && window.instanceKey !== 'welcome',
+  )
+  const minimizedWindows = state.windows.filter(
+    (window) => window.isOpen && window.isMinimized && window.instanceKey !== 'welcome',
+  )
+
+  return {
+    welcomeWindow,
+    openWindows,
+    minimizedWindows,
+  }
+}

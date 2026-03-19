@@ -1,89 +1,135 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 
 interface UseDraggableProps {
   initialPosition: { x: number; y: number }
-  onDrag: (position: { x: number; y: number }) => void
+  disabled?: boolean
+  onDragStart?: () => void
+  onDragEnd?: (position: { x: number; y: number }) => void
 }
 
-export const useDraggable = ({ initialPosition, onDrag }: UseDraggableProps) => {
-  const [position, setPosition] = useState(initialPosition)
-  const dragRef = useRef({ isDragging: false, offset: { x: 0, y: 0 } })
-  const moveListenerRef = useRef<((e: MouseEvent) => void) | null>(null)
-  const upListenerRef = useRef<(() => void) | null>(null)
-  const onDragRef = useRef(onDrag)
+const canStartPointerDrag = (event: ReactPointerEvent) =>
+  event.pointerType === 'touch' || event.button === 0
+
+export const useDraggable = ({
+  initialPosition,
+  disabled = false,
+  onDragStart,
+  onDragEnd,
+}: UseDraggableProps) => {
+  const [dragPosition, setDragPosition] = useState(initialPosition)
+  const [isDragging, setIsDragging] = useState(false)
+  const latestPositionRef = useRef(initialPosition)
+  const dragStateRef = useRef({
+    isDragging: false,
+    pointerId: -1,
+    offset: { x: 0, y: 0 },
+  })
+  const moveListenerRef = useRef<((event: PointerEvent) => void) | null>(null)
+  const endListenerRef = useRef<((event: PointerEvent) => void) | null>(null)
+  const onDragStartRef = useRef(onDragStart)
+  const onDragEndRef = useRef(onDragEnd)
 
   useEffect(() => {
-    onDragRef.current = onDrag
-  }, [onDrag])
+    onDragStartRef.current = onDragStart
+  }, [onDragStart])
 
   useEffect(() => {
-    setPosition(initialPosition)
-  }, [initialPosition])
+    onDragEndRef.current = onDragEnd
+  }, [onDragEnd])
 
   const clearListeners = useCallback(() => {
     if (moveListenerRef.current) {
-      document.removeEventListener('mousemove', moveListenerRef.current)
+      window.removeEventListener('pointermove', moveListenerRef.current)
       moveListenerRef.current = null
     }
 
-    if (upListenerRef.current) {
-      document.removeEventListener('mouseup', upListenerRef.current)
-      upListenerRef.current = null
+    if (endListenerRef.current) {
+      window.removeEventListener('pointerup', endListenerRef.current)
+      window.removeEventListener('pointercancel', endListenerRef.current)
+      endListenerRef.current = null
     }
   }, [])
 
   const beginDrag = useCallback(
-    (clientX: number, clientY: number, anchorPosition: { x: number; y: number }) => {
+    (pointerId: number, clientX: number, clientY: number, anchorPosition: { x: number; y: number }) => {
       clearListeners()
 
-      dragRef.current.isDragging = true
-      dragRef.current.offset = {
-        x: clientX - anchorPosition.x,
-        y: clientY - anchorPosition.y,
+      dragStateRef.current = {
+        isDragging: true,
+        pointerId,
+        offset: {
+          x: clientX - anchorPosition.x,
+          y: clientY - anchorPosition.y,
+        },
       }
 
-      const handleMouseMove = (event: MouseEvent) => {
-        if (!dragRef.current.isDragging) return
+      setIsDragging(true)
+      setDragPosition(anchorPosition)
+      latestPositionRef.current = anchorPosition
+      onDragStartRef.current?.()
 
-        const newX = event.clientX - dragRef.current.offset.x
-        const newY = event.clientY - dragRef.current.offset.y
+      const handlePointerMove = (event: PointerEvent) => {
+        if (!dragStateRef.current.isDragging || event.pointerId !== dragStateRef.current.pointerId) {
+          return
+        }
 
-        setPosition({ x: newX, y: newY })
-        onDragRef.current({ x: newX, y: newY })
+        const nextPosition = {
+          x: event.clientX - dragStateRef.current.offset.x,
+          y: event.clientY - dragStateRef.current.offset.y,
+        }
+
+        latestPositionRef.current = nextPosition
+        setDragPosition(nextPosition)
       }
 
-      const handleMouseUp = () => {
-        dragRef.current.isDragging = false
+      const handlePointerEnd = (event: PointerEvent) => {
+        if (event.pointerId !== dragStateRef.current.pointerId) {
+          return
+        }
+
+        dragStateRef.current.isDragging = false
+        dragStateRef.current.pointerId = -1
+        setIsDragging(false)
         clearListeners()
+        onDragEndRef.current?.(latestPositionRef.current)
       }
 
-      moveListenerRef.current = handleMouseMove
-      upListenerRef.current = handleMouseUp
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
+      moveListenerRef.current = handlePointerMove
+      endListenerRef.current = handlePointerEnd
+      window.addEventListener('pointermove', handlePointerMove)
+      window.addEventListener('pointerup', handlePointerEnd)
+      window.addEventListener('pointercancel', handlePointerEnd)
     },
-    [clearListeners]
+    [clearListeners],
   )
 
-  const handleMouseDown = useCallback(
-    (e: ReactMouseEvent) => {
-      e.preventDefault()
-      beginDrag(e.clientX, e.clientY, position)
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent) => {
+      if (disabled || !canStartPointerDrag(event)) {
+        return
+      }
+
+      event.preventDefault()
+      beginDrag(event.pointerId, event.clientX, event.clientY, isDragging ? dragPosition : initialPosition)
     },
-    [beginDrag, position]
+    [beginDrag, disabled, dragPosition, initialPosition, isDragging],
   )
 
   const startDragAt = useCallback(
-    (e: ReactMouseEvent, anchorPosition: { x: number; y: number }) => {
-      e.preventDefault()
-      setPosition(anchorPosition)
-      onDragRef.current(anchorPosition)
-      beginDrag(e.clientX, e.clientY, anchorPosition)
+    (event: ReactPointerEvent, anchorPosition: { x: number; y: number }) => {
+      if (disabled || !canStartPointerDrag(event)) {
+        return
+      }
+
+      event.preventDefault()
+      setDragPosition(anchorPosition)
+      latestPositionRef.current = anchorPosition
+      beginDrag(event.pointerId, event.clientX, event.clientY, anchorPosition)
     },
-    [beginDrag]
+    [beginDrag, disabled],
   )
 
   useEffect(() => clearListeners, [clearListeners])
 
-  return { position, handleMouseDown, startDragAt }
+  return { position: isDragging ? dragPosition : initialPosition, handlePointerDown, startDragAt }
 }
