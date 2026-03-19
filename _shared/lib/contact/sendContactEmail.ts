@@ -16,6 +16,12 @@ type ContactMailConfig = {
 
 let cachedTransporter: nodemailer.Transporter | null = null
 let cachedConfigKey: string | null = null
+let cachedTransporterVerification:
+  | {
+      configKey: string
+      promise: Promise<void>
+    }
+  | null = null
 
 const RETRY_DELAYS_MS = [500, 1_000, 2_000]
 
@@ -42,12 +48,18 @@ const getContactMailConfig = (): ContactMailConfig => {
     )
   }
 
+  const parsedPort = Number(SMTP_PORT)
+
+  if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
+    throw new Error('Contact form email delivery is not configured correctly. SMTP_PORT must be a positive integer.')
+  }
+
   return {
     destinationEmail: CONTACT_DESTINATION_EMAIL,
     fromEmail: CONTACT_FROM_EMAIL ?? SMTP_USER,
     host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: SMTP_SECURE === 'true' || Number(SMTP_PORT) === 465,
+    port: parsedPort,
+    secure: SMTP_SECURE === 'true' || parsedPort === 465,
     user: SMTP_USER,
     password: SMTP_PASSWORD,
   }
@@ -80,6 +92,17 @@ const getTransporter = (config: ContactMailConfig) => {
   return cachedTransporter
 }
 
+const verifyTransporter = async (transporter: nodemailer.Transporter, configKey: string) => {
+  if (!cachedTransporterVerification || cachedTransporterVerification.configKey !== configKey) {
+    cachedTransporterVerification = {
+      configKey,
+      promise: transporter.verify().then(() => undefined),
+    }
+  }
+
+  return cachedTransporterVerification.promise
+}
+
 const sleep = (durationMs: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, durationMs)
@@ -87,7 +110,9 @@ const sleep = (durationMs: number) =>
 
 export const sendContactEmail = async (submission: ContactFormData) => {
   const config = getContactMailConfig()
+  const configKey = JSON.stringify(config)
   const transporter = getTransporter(config)
+  await verifyTransporter(transporter, configKey)
 
   const text = [
     'New portfolio contact form submission',

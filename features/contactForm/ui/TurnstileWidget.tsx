@@ -33,6 +33,9 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
   resetSignal,
   onTokenChange,
 }) => {
+  const emitTokenChange = React.useEffectEvent((token: string) => {
+    onTokenChange(token)
+  })
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const widgetIdRef = React.useRef<string | null>(null)
   const [isScriptReady, setIsScriptReady] = React.useState(false)
@@ -42,7 +45,7 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
       return
     }
 
-    onTokenChange('')
+    emitTokenChange('')
 
     if (widgetIdRef.current) {
       window.turnstile.remove(widgetIdRef.current)
@@ -53,13 +56,13 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
       sitekey: siteKey,
       theme: 'light',
       callback: (token) => {
-        onTokenChange(token)
+        emitTokenChange(token)
       },
       'expired-callback': () => {
-        onTokenChange('')
+        emitTokenChange('')
       },
       'error-callback': () => {
-        onTokenChange('')
+        emitTokenChange('')
       },
     })
 
@@ -69,16 +72,16 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         widgetIdRef.current = null
       }
     }
-  }, [isScriptReady, onTokenChange, siteKey])
+  }, [isScriptReady, siteKey])
 
   React.useEffect(() => {
     if (!widgetIdRef.current || !window.turnstile) {
       return
     }
 
-    onTokenChange('')
+    emitTokenChange('')
     window.turnstile.reset(widgetIdRef.current)
-  }, [onTokenChange, resetSignal])
+  }, [resetSignal])
 
   if (!siteKey) {
     return (

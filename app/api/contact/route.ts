@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (!isAllowedContactRequest(request.headers)) {
+  if (!isAllowedContactRequest(request.headers, request.nextUrl.origin)) {
     return NextResponse.json(
       { error: 'This request origin is not allowed.' },
       {
@@ -91,7 +91,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const turnstileVerification = await verifyTurnstileToken(turnstileToken, clientIpAddress)
+    const turnstileVerification = await verifyTurnstileToken(
+      turnstileToken,
+      clientIpAddress,
+      request.nextUrl.origin,
+    )
 
     if (!turnstileVerification.success) {
       return NextResponse.json(

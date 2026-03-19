@@ -21,27 +21,68 @@ const toPositiveInteger = (value: string | undefined, fallback: number) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
-const getAllowedOrigins = () => {
-  const rawOrigins = process.env.CONTACT_ALLOWED_ORIGINS
-
-  if (!rawOrigins) {
-    return DEFAULT_ALLOWED_ORIGINS
+const toOrigin = (value: string | undefined) => {
+  if (!value) {
+    return null
   }
 
-  return rawOrigins
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean)
+  try {
+    return new URL(value).origin
+  } catch {
+    try {
+      return new URL(`https://${value}`).origin
+    } catch {
+      return null
+    }
+  }
 }
 
-const getAllowedHostnames = () =>
-  getAllowedOrigins().flatMap((origin) => {
-    try {
-      return [new URL(origin).hostname]
-    } catch {
-      return []
+const getAllowedOrigins = (requestOrigin?: string) => {
+  const configuredOrigins =
+    process.env.CONTACT_ALLOWED_ORIGINS
+      ?.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean) ?? []
+
+  return Array.from(
+    new Set(
+      [
+        ...DEFAULT_ALLOWED_ORIGINS,
+        ...configuredOrigins,
+        process.env.NEXT_PUBLIC_SITE_URL,
+        process.env.VERCEL_PROJECT_PRODUCTION_URL,
+        process.env.VERCEL_BRANCH_URL,
+        process.env.VERCEL_URL,
+        requestOrigin,
+      ]
+        .map(toOrigin)
+        .filter((origin): origin is string => Boolean(origin)),
+    ),
+  )
+}
+
+const getAllowedHostnames = (requestOrigin?: string) =>
+  getAllowedOrigins(requestOrigin).map((origin) => new URL(origin).hostname)
+
+const getRateLimitWindow = (): RateLimitWindow => {
+  const configuredWindow = process.env.CONTACT_RATE_LIMIT_WINDOW?.trim()
+
+  if (configuredWindow) {
+    return configuredWindow as RateLimitWindow
+  }
+
+  const configuredWindowMs = process.env.CONTACT_RATE_LIMIT_WINDOW_MS?.trim()
+
+  if (configuredWindowMs) {
+    const parsedMs = Number(configuredWindowMs)
+
+    if (Number.isInteger(parsedMs) && parsedMs > 0) {
+      return `${parsedMs} ms`
     }
-  })
+  }
+
+  return DEFAULT_RATE_LIMIT_WINDOW
+}
 
 let cachedRedisClient: Redis | null = null
 let cachedRateLimit: Ratelimit | null = null
@@ -56,13 +97,11 @@ const getRedisClient = () => {
 
 const getContactRateLimit = () => {
   if (!cachedRateLimit) {
-    const rateLimitWindow = (process.env.CONTACT_RATE_LIMIT_WINDOW ?? DEFAULT_RATE_LIMIT_WINDOW) as RateLimitWindow
-
     cachedRateLimit = new Ratelimit({
       redis: getRedisClient(),
       limiter: Ratelimit.slidingWindow(
         toPositiveInteger(process.env.CONTACT_RATE_LIMIT_MAX, DEFAULT_RATE_LIMIT_MAX),
-        rateLimitWindow,
+        getRateLimitWindow(),
       ),
       analytics: true,
       prefix: 'contact-form',
@@ -82,8 +121,8 @@ export const getClientIpAddress = (headers: Headers) => {
   return headers.get('x-real-ip') ?? 'unknown'
 }
 
-export const isAllowedContactRequest = (headers: Headers) => {
-  const allowedOrigins = getAllowedOrigins()
+export const isAllowedContactRequest = (headers: Headers, requestOrigin?: string) => {
+  const allowedOrigins = getAllowedOrigins(requestOrigin)
   const origin = headers.get('origin')
   const referer = headers.get('referer')
 
@@ -107,7 +146,11 @@ export const rateLimitContactRequest = async (ipAddress: string) => {
   return ratelimit.limit(`contact:${ipAddress}`)
 }
 
-export const verifyTurnstileToken = async (token: string, remoteIp?: string) => {
+export const verifyTurnstileToken = async (
+  token: string,
+  remoteIp?: string,
+  requestOrigin?: string,
+) => {
   const secret = process.env.TURNSTILE_SECRET_KEY
 
   if (!secret) {
@@ -132,7 +175,7 @@ export const verifyTurnstileToken = async (token: string, remoteIp?: string) => 
   }
 
   const result = (await response.json()) as TurnstileVerificationResponse
-  const allowedHostnames = getAllowedHostnames()
+  const allowedHostnames = getAllowedHostnames(requestOrigin)
 
   if (!result.success) {
     return result

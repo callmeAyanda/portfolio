@@ -2,10 +2,30 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Taskbar } from '@/widgets/taskbar/Taskbar'
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+const toAbsoluteUrl = (value: string | undefined) => {
+  if (!value) {
+    return null
+  }
+
+  try {
+    return new URL(value)
+  } catch {
+    try {
+      return new URL(`https://${value}`)
+    } catch {
+      return null
+    }
+  }
+}
+
+const siteUrl =
+  toAbsoluteUrl(process.env.NEXT_PUBLIC_SITE_URL) ??
+  toAbsoluteUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ??
+  toAbsoluteUrl(process.env.VERCEL_URL) ??
+  new URL('http://localhost:3000')
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: siteUrl,
   title: "Ayanda's Retro Portfolio",
   description: 'Windows 98 inspired portfolio for Ayanda Makhubu.',
   alternates: {
